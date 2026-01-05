@@ -11,6 +11,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(SOURCES
     src/Main.cpp
+    src/Config.cpp
+)
+
+set(INCLUDES
+    src
+    src/utils
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDES})
