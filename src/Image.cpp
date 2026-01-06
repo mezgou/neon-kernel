@@ -125,7 +125,7 @@ std::expected<std::string, std::string> SaveImage(const std::filesystem::path& p
     } else {
         for (size_t i = 0; i < totalPixels; i++) {
             file << image.R[i] << " " << image.G[i] << " " << image.B[i] << " ";
-            if (i % image.Width == 0) file << "\n";
+            if ((i + 1) % image.Width == 0) file << "\n";
         }
     }
 

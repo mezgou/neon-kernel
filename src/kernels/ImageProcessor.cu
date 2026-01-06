@@ -9,6 +9,39 @@
     } \
 } while(0)
 
+DeviceImage::DeviceImage(size_t width, size_t height)
+    : m_Width(width), m_Height(height) {
+    size_t frameSize = width * height * sizeof(unsigned short);
+    CALL_CUDA(cudaMalloc(&m_Data, frameSize * 3));
+
+    m_R = m_Data;
+    m_G = m_Data + (width * height);
+    m_B = m_G + (width * height);
+}
+
+DeviceImage::~DeviceImage()
+{
+    if (m_Data) {
+        CALL_CUDA(cudaFree(m_Data));
+    }
+}
+
+void DeviceImage::Upload(const unsigned short* h_R, const unsigned short* h_G, const unsigned short* h_B)
+{
+    size_t frameSize = m_Width * m_Height * sizeof(unsigned short);
+    CALL_CUDA(cudaMemcpy(m_R, h_R, frameSize, cudaMemcpyHostToDevice));
+    CALL_CUDA(cudaMemcpy(m_G, h_G, frameSize, cudaMemcpyHostToDevice));
+    CALL_CUDA(cudaMemcpy(m_B, h_B, frameSize, cudaMemcpyHostToDevice));
+}
+
+void DeviceImage::Download(unsigned short* h_R, unsigned short* h_G, unsigned short* h_B)
+{
+    size_t frameSize = m_Width * m_Height * sizeof(unsigned short);
+    CALL_CUDA(cudaMemcpy(h_R, m_R, frameSize, cudaMemcpyDeviceToHost));
+    CALL_CUDA(cudaMemcpy(h_G, m_G, frameSize, cudaMemcpyDeviceToHost));
+    CALL_CUDA(cudaMemcpy(h_B, m_B, frameSize, cudaMemcpyDeviceToHost));
+}
+
 __global__ void GPUImageInversion(unsigned short* r, unsigned short* g, unsigned short* b, uint16_t maxValue, size_t imageResolution) {
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < imageResolution) {
@@ -28,7 +61,7 @@ __global__ void GPUImageGrayscale(unsigned short* r, unsigned short* g, unsigned
     }
 }
 
-__global__ void GPUImageBlur(unsigned short* r, unsigned short* g, unsigned short* b, size_t width, size_t height, int value,
+__global__ void GPUImageBlur(unsigned short* r, unsigned short* g, unsigned short* b, size_t width, size_t height, int radius,
                             unsigned short* dstR, unsigned short* dstG, unsigned short* dstB) {
     size_t x = blockIdx.x * blockDim.x + threadIdx.x;
     size_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -39,7 +72,6 @@ __global__ void GPUImageBlur(unsigned short* r, unsigned short* g, unsigned shor
     unsigned long long sumB = 0;
     int count = 0;
 
-    int radius = 1 * value;
     for (int dx = -radius; dx < radius + 1; dx++) {
         for (int dy = -radius; dy < radius + 1; dy++) {
             int nx = x + dx;
@@ -59,104 +91,74 @@ __global__ void GPUImageBlur(unsigned short* r, unsigned short* g, unsigned shor
     dstB[index] = (unsigned short)(sumB / count);
 }
 
+__global__ void GPUImageSepia(unsigned short* r, unsigned short* g, unsigned short* b, size_t imageResolution, uint16_t maxValue) {
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < imageResolution) {
+        float inR = (float)r[index];
+        float inG = (float)g[index];
+        float inB = (float)b[index];
+
+        float outR = (inR * 0.393f) + (inG * 0.769f) + (inB * 0.189f);
+        float outG = (inR * 0.349f) + (inG * 0.686f) + (inB * 0.168f);
+        float outB = (inR * 0.272f) + (inG * 0.534f) + (inB * 0.131f);
+
+        r[index] = (unsigned short)fminf(maxValue, outR);
+        g[index] = (unsigned short)fminf(maxValue, outG);
+        b[index] = (unsigned short)fminf(maxValue, outB);
+    }
+}
+
 void ApplyInversion(unsigned short* R, unsigned short* G, unsigned short* B, size_t width, size_t height, uint16_t maxValue) {
-    size_t imageResolution = width * height;
-    size_t threadsPerBlock = 256;
-    size_t blocksPerGrid = (imageResolution + threadsPerBlock - 1) / threadsPerBlock;
+    DeviceImage image(width, height);
+    image.Upload(R, G, B);
 
-    unsigned short* r;
-    unsigned short* g;
-    unsigned short* b;
-
-    CALL_CUDA(cudaMalloc(&r, sizeof(unsigned short) * imageResolution));
-    CALL_CUDA(cudaMalloc(&g, sizeof(unsigned short) * imageResolution));
-    CALL_CUDA(cudaMalloc(&b, sizeof(unsigned short) * imageResolution));
-
-    CALL_CUDA(cudaMemcpy(r, R, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-    CALL_CUDA(cudaMemcpy(g, G, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-    CALL_CUDA(cudaMemcpy(b, B, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-
-    GPUImageInversion<<<blocksPerGrid, threadsPerBlock>>>(r, g, b, maxValue, imageResolution);
+    size_t resolution = width * height;
+    GPUImageInversion<<<(resolution + 255) / 256, 256>>>(image.R(), image.G(), image.B(), maxValue, resolution);
     CALL_CUDA(cudaGetLastError());
     CALL_CUDA(cudaDeviceSynchronize());
-
-    CALL_CUDA(cudaMemcpy(R, r, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
-    CALL_CUDA(cudaMemcpy(G, g, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
-    CALL_CUDA(cudaMemcpy(B, b, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
-
-    CALL_CUDA(cudaFree(r));
-    CALL_CUDA(cudaFree(g));
-    CALL_CUDA(cudaFree(b));
+    
+    image.Download(R, G, B);
 }
 
 void ApplyGrayscale(unsigned short* R, unsigned short* G, unsigned short* B, size_t width, size_t height, uint16_t maxValue) {
-    size_t imageResolution = width * height;
-    size_t threadsPerBlock = 256;
-    size_t blocksPerGrid = (imageResolution + threadsPerBlock - 1) / threadsPerBlock;
+    DeviceImage image(width, height);
+    image.Upload(R, G, B);
 
-    unsigned short* r;
-    unsigned short* g;
-    unsigned short* b;
-
-    CALL_CUDA(cudaMalloc(&r, sizeof(unsigned short) * imageResolution));
-    CALL_CUDA(cudaMalloc(&g, sizeof(unsigned short) * imageResolution));
-    CALL_CUDA(cudaMalloc(&b, sizeof(unsigned short) * imageResolution));
-
-    CALL_CUDA(cudaMemcpy(r, R, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-    CALL_CUDA(cudaMemcpy(g, G, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-    CALL_CUDA(cudaMemcpy(b, B, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-
-    GPUImageGrayscale<<<blocksPerGrid, threadsPerBlock>>>(r, g, b, imageResolution);
+    size_t resolution = width * height;
+    GPUImageGrayscale<<<(resolution + 255) / 256, 256>>>(image.R(), image.G(), image.B(), resolution);
     CALL_CUDA(cudaGetLastError());
     CALL_CUDA(cudaDeviceSynchronize());
 
-    CALL_CUDA(cudaMemcpy(R, r, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
-    CALL_CUDA(cudaMemcpy(G, g, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
-    CALL_CUDA(cudaMemcpy(B, b, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
-
-    CALL_CUDA(cudaFree(r));
-    CALL_CUDA(cudaFree(g));
-    CALL_CUDA(cudaFree(b));
+    image.Download(R, G, B);
 }
 
-void ApplyBlur(unsigned short* R, unsigned short* G, unsigned short* B, size_t width, size_t height, uint16_t maxValue, int value) {
-    size_t imageResolution = width * height;
+void ApplyBlur(unsigned short* R, unsigned short* G, unsigned short* B, size_t width, size_t height, uint16_t maxValue, int radius) {
+    DeviceImage src(width, height);
+    DeviceImage dst(width, height);
+
+    src.Upload(R, G, B);
+
     dim3 blockSize(16, 16);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
-
-    unsigned short* r;
-    unsigned short* g;
-    unsigned short* b;
-
-    unsigned short* dstR;
-    unsigned short* dstG;
-    unsigned short* dstB;
-
-    CALL_CUDA(cudaMalloc(&r, sizeof(unsigned short) * imageResolution));
-    CALL_CUDA(cudaMalloc(&g, sizeof(unsigned short) * imageResolution));
-    CALL_CUDA(cudaMalloc(&b, sizeof(unsigned short) * imageResolution));
-
-    CALL_CUDA(cudaMalloc(&dstR, sizeof(unsigned short) * imageResolution));
-    CALL_CUDA(cudaMalloc(&dstG, sizeof(unsigned short) * imageResolution));
-    CALL_CUDA(cudaMalloc(&dstB, sizeof(unsigned short) * imageResolution));
-
-    CALL_CUDA(cudaMemcpy(r, R, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-    CALL_CUDA(cudaMemcpy(g, G, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-    CALL_CUDA(cudaMemcpy(b, B, sizeof(unsigned short) * imageResolution, cudaMemcpyHostToDevice));
-
-    GPUImageBlur<<<gridSize, blockSize>>>(r, g, b, width, height, value, dstR, dstG, dstB);
+    GPUImageBlur<<<gridSize, blockSize>>>(
+        src.R(), src.G(), src.B(),
+        width, height, radius,
+        dst.R(), dst.G(), dst.B()
+    );
     CALL_CUDA(cudaGetLastError());
     CALL_CUDA(cudaDeviceSynchronize());
 
-    CALL_CUDA(cudaMemcpy(R, dstR, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
-    CALL_CUDA(cudaMemcpy(G, dstG, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
-    CALL_CUDA(cudaMemcpy(B, dstB, sizeof(unsigned short) * imageResolution, cudaMemcpyDeviceToHost));
+    dst.Download(R, G, B);
+}
 
-    CALL_CUDA(cudaFree(r));
-    CALL_CUDA(cudaFree(g));
-    CALL_CUDA(cudaFree(b));
+void ApplySepia(unsigned short* R, unsigned short* G, unsigned short* B, size_t width, size_t height, uint16_t maxValue) {
+    DeviceImage image(width, height);
+    image.Upload(R, G, B);
 
-    CALL_CUDA(cudaFree(dstR));
-    CALL_CUDA(cudaFree(dstG));
-    CALL_CUDA(cudaFree(dstB));
+    size_t resolution = width * height;
+    GPUImageSepia<<<(resolution + 255) / 256, 256>>>(image.R(), image.G(), image.B(), resolution, maxValue);
+    CALL_CUDA(cudaGetLastError());
+    CALL_CUDA(cudaDeviceSynchronize());
+
+    image.Download(R, G, B);
 }

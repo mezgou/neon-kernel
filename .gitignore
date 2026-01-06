@@ -1,7 +1,8 @@
 .vscode
 .venv
 
+*.ppm
+
 build
-assets
 
 __pycache__

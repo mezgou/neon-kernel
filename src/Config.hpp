@@ -8,7 +8,8 @@ enum class EffectType {
     None,
     Grayscale,
     Blur,
-    Inversion
+    Inversion,
+    Sepia
 };
 
 struct AppConfig {

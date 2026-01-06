@@ -12,6 +12,7 @@ inline std::string_view EffectTypeToString(EffectType effect) {
         case EffectType::Grayscale: return "Grayscale";
         case EffectType::Blur: return "Blur";
         case EffectType::Inversion: return "Inversion";
+        case EffectType::Sepia: return "Sepia";
         default: return "None";
     }
 }
@@ -19,7 +20,7 @@ inline std::string_view EffectTypeToString(EffectType effect) {
 inline void PrintDebugInfo(const AppConfig& config, const Image& image) {
     std::println("[Debug] config.Input = {}", config.Input.string());
     std::println("[Debug] config.Output = {}", config.Output.string());
-    std::println("[Debug] config.CoefRadiusConvolution = {}", config.CoefRadiusConvolution.value_or(0.0f));
+    std::println("[Debug] config.CoefRadiusConvolution = {}", config.CoefRadiusConvolution.value_or(1));
     std::println("[Debug] config.Effect = {}", EffectTypeToString(config.Effect));
     std::println("[Debug] image.Width = {}", image.Width);
     std::println("[Debug] image.Height = {}", image.Height);
@@ -34,5 +35,7 @@ inline void ApplyEffect(const AppConfig& config, Image& image) {
         ApplyGrayscale(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
     } else if (config.Effect == EffectType::Blur) {
         ApplyBlur(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue, config.CoefRadiusConvolution.value_or(1));
+    } else if (config.Effect == EffectType::Sepia) {
+        ApplySepia(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
     }
 }

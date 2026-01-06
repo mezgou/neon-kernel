@@ -14,7 +14,8 @@ static std::expected<std::string_view, std::string> GetNextArgument(size_t index
 static const std::unordered_map<std::string_view, EffectType> s_Effects = {
     {"grayscale", EffectType::Grayscale},
     {"blur", EffectType::Blur},
-    {"inversion", EffectType::Inversion}
+    {"inversion", EffectType::Inversion},
+    {"sepia", EffectType::Sepia}
 };
 
 std::expected<AppConfig, std::string> GetAppConfig(int argc, char* argv[]) {
