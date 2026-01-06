@@ -1,10 +1,4 @@
 #include <print>
-#include <expected>
-#include <string>
-#include <fstream>
-#include <iostream>
-#include <limits>
-#include <vector>
 
 #include "Config.hpp"
 #include "Image.hpp"
@@ -32,9 +26,13 @@ int main(int argc, char* argv[]) {
     PrintDebugInfo(config, image);
 #endif
 
-    // ApplyInversion(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
-    // ApplyGrayscale(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
-    ApplyBlur(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue, config.CoefEffect.value_or(0));
+    if (config.Effect == EffectType::Inversion) {
+        ApplyInversion(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
+    } else if (config.Effect == EffectType::Grayscale) {
+        ApplyGrayscale(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
+    } else if (config.Effect == EffectType::Blur) {
+        ApplyBlur(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue, config.CoefEffect.value_or(0));
+    }
 
     auto result = SaveImage(config.Output, image, true);
     if (!result) {
