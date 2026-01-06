@@ -18,7 +18,7 @@ python scripts/build.py --build-type release
 ## Usage
 
 ```bash
-python scripts/run.py --build-type release -i <input.ppm> -o <output.ppm> -e <effect> -v <value>
+python scripts/run.py --build-type release -i input.ppm -o output.ppm -e effect -v value
 ```
 
 ### Arguments
