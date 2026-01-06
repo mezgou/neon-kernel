@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     } else if (config.Effect == EffectType::Grayscale) {
         ApplyGrayscale(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
     } else if (config.Effect == EffectType::Blur) {
-        ApplyBlur(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue, config.CoefEffect.value_or(0));
+        ApplyBlur(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue, config.CoefRadiusConvolution.value());
     }
 
     auto result = SaveImage(config.Output, image, true);

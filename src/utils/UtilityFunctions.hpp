@@ -17,7 +17,7 @@ inline std::string_view EffectTypeToString(EffectType effect) {
 inline void PrintDebugInfo(const AppConfig& config, const Image& image) {
     std::println("[Debug] config.Input = {}", config.Input.string());
     std::println("[Debug] config.Output = {}", config.Output.string());
-    std::println("[Debug] config.CoefEffect = {}", config.CoefEffect.value_or(0.0f));
+    std::println("[Debug] config.CoefRadiusConvolution = {}", config.CoefRadiusConvolution.value_or(0.0f));
     std::println("[Debug] config.Effect = {}", EffectTypeToString(config.Effect));
     std::println("[Debug] image.Width = {}", image.Width);
     std::println("[Debug] image.Height = {}", image.Height);

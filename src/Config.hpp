@@ -14,10 +14,8 @@ enum class EffectType {
 struct AppConfig {
     std::filesystem::path Input;
     std::filesystem::path Output;
-    std::optional<int> CoefEffect;
+    std::optional<int> CoefRadiusConvolution;
     EffectType Effect;
 };
-
-std::expected<std::string_view, std::string> GetNextArgument(size_t index, std::span<char*> arguments);
 
 std::expected<AppConfig, std::string> GetAppConfig(int argc, char* argv[]);

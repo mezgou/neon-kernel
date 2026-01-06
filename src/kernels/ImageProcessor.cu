@@ -1,6 +1,6 @@
 #include "ImageProcessor.hpp"
 
-#include "stdio.h"
+#include <stdio.h>
 
 #define CALL_CUDA(function) do { \
     cudaError_t error = function; \
