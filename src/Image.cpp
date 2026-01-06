@@ -89,3 +89,48 @@ std::expected<Image, std::string> GetImage(std::filesystem::path path) {
 
     return image;
 }
+
+std::expected<std::string, std::string> SaveImage(const std::filesystem::path& path, const Image& image, bool isBinary = false) {
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open()) return std::unexpected("[Error] Failed open file");
+
+    file << (isBinary ? "P6" : "P3") << "\n";
+    file << image.Width << " " << image.Height << "\n";
+    file << image.MaxValue << "\n";
+
+    size_t totalPixels = image.Width * image.Height;
+    if (isBinary) {
+        if (image.MaxValue < 256) {
+            std::vector<uint8_t> buffer(totalPixels * 3);
+            for (size_t i = 0; i < totalPixels; i++) {
+                buffer[i * 3 + 0] = static_cast<uint8_t>(image.R[i]);
+                buffer[i * 3 + 1] = static_cast<uint8_t>(image.G[i]);
+                buffer[i * 3 + 2] = static_cast<uint8_t>(image.B[i]);
+            }
+            file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+        } else {
+            std::vector<uint8_t> buffer(totalPixels * 3 * 2);
+            auto Set16 = [&](size_t offset, uint16_t value) {
+                buffer[offset] = static_cast<uint8_t>(value >> 8);
+                buffer[offset + 1] = static_cast<uint8_t>(value & 0xFF);
+            };
+            for (size_t i = 0; i < totalPixels; i++) {
+                Set16(i * 6 + 0, image.R[i]);
+                Set16(i * 6 + 2, image.G[i]);
+                Set16(i * 6 + 4, image.B[i]);
+            }
+            file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+        }
+    } else {
+        for (size_t i = 0; i < totalPixels; i++) {
+            file << image.R[i] << " " << image.G[i] << " " << image.B[i] << " ";
+            if (i % image.Width == 0) file << "\n";
+        }
+    }
+
+    if (!file) {
+        return std::unexpected("[Error] Failed write image to save");
+    }
+
+    return "[Info] Saving image is successful";
+}

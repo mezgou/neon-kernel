@@ -36,5 +36,12 @@ int main(int argc, char* argv[]) {
     std::println("[Debug] image.Height = {}", image.Height);
     std::println("[Debug] image.MaxValue = {}", image.MaxValue);
 
+    auto result = SaveImage(config.Output, image, true);
+    if (!result) {
+        std::println("{}", resultImage.error());
+        return 1;
+    }
+    std::println("{}", result.value());
+
     return 0;
 }

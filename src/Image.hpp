@@ -23,3 +23,4 @@ void P6Handler(std::ifstream& file, Image& image);
 void SkipPPMComments(std::ifstream& file);
 
 std::expected<Image, std::string> GetImage(std::filesystem::path path);
+std::expected<std::string, std::string> SaveImage(const std::filesystem::path& path, const Image& image, bool isBinary);
