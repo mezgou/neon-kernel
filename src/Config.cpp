@@ -65,7 +65,7 @@ std::expected<AppConfig, std::string> GetAppConfig(int argc, char* argv[]) {
             if (!result) return std::unexpected("[Error] Missing value for " + std::string(argument));
 
             std::string_view value = result.value();
-            float coef = 0.0f;
+            int coef = 0;
             auto [pointer, errorCode] = std::from_chars(value.data(), value.data() + value.size(), coef);
             if (errorCode != std::errc{} || pointer != value.data() + value.size()) return std::unexpected("[Error] Incorrect input for coefEffect. A number is needed");
             config.CoefEffect = coef;

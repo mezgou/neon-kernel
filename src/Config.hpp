@@ -14,7 +14,7 @@ enum class EffectType {
 struct AppConfig {
     std::filesystem::path Input;
     std::filesystem::path Output;
-    std::optional<float> CoefEffect;
+    std::optional<int> CoefEffect;
     EffectType Effect;
 };
 

@@ -9,6 +9,7 @@
 #include "Config.hpp"
 #include "Image.hpp"
 #include "UtilityFunctions.hpp"
+#include "ImageProcessor.hpp"
 
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
@@ -19,11 +20,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     AppConfig config = resultConfig.value();
-
-    std::println("[Debug] config.Input = {}", config.Input.string());
-    std::println("[Debug] config.Output = {}", config.Output.string());
-    std::println("[Debug] config.CoefEffect = {}", config.CoefEffect.value_or(0.0f));
-    std::println("[Debug] config.Effect = {}", EffectTypeToString(config.Effect));
     
     auto resultImage = GetImage(config.Input);
     if (!resultImage) {
@@ -32,9 +28,13 @@ int main(int argc, char* argv[]) {
     }
     Image image = resultImage.value();
 
-    std::println("[Debug] image.Width = {}", image.Width);
-    std::println("[Debug] image.Height = {}", image.Height);
-    std::println("[Debug] image.MaxValue = {}", image.MaxValue);
+#ifdef _DEBUG
+    PrintDebugInfo(config, image);
+#endif
+
+    // ApplyInversion(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
+    // ApplyGrayscale(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
+    ApplyBlur(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue, config.CoefEffect.value_or(0));
 
     auto result = SaveImage(config.Output, image, true);
     if (!result) {

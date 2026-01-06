@@ -13,12 +13,18 @@ set(SOURCES
     src/Main.cpp
     src/Config.cpp
     src/Image.cpp
+    src/kernels/ImageProcessor.cu
 )
 
 set(INCLUDES
     src
     src/utils
+    src/kernels
 )
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(DEBUG _DEBUG)
+endif()
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 

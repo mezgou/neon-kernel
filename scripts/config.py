@@ -1,6 +1,7 @@
 import argparse
 import os
 
+
 BUILD_DIR: str = os.path.abspath("build")
 ROOT_DIR: str = os.path.abspath(".")
 PROJECT_NAME: str = "neon-kernel"

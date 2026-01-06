@@ -44,7 +44,7 @@ void SkipPPMComments(std::ifstream& file) {
     }
 }
 
-std::expected<Image, std::string> GetImage(std::filesystem::path path) {
+std::expected<Image, std::string> GetImage(const std::filesystem::path& path) {
     Image image;
 
     std::ifstream file(path, std::ios::binary);
