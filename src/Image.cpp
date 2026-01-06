@@ -1,12 +1,12 @@
 #include "Image.hpp"
 
-void P3Handler(std::ifstream& file, Image& image) {
+static void P3Handler(std::ifstream& file, Image& image) {
     for (size_t i = 0; i < image.Width * image.Height; i++) {
         file >> image.R[i] >> image.G[i] >> image.B[i];
     }
 }
 
-void P6Handler(std::ifstream& file, Image& image) {
+static void P6Handler(std::ifstream& file, Image& image) {
     file.get();
     size_t totalPixels = image.Width * image.Height;
 
@@ -36,7 +36,7 @@ void P6Handler(std::ifstream& file, Image& image) {
     }
 }
 
-void SkipPPMComments(std::ifstream& file) {
+static void SkipPPMComments(std::ifstream& file) {
     file >> std::ws;
     while (file.peek() == '#') {
         file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -81,6 +81,7 @@ std::expected<Image, std::string> GetImage(const std::filesystem::path& path) {
     image.Width = width;
     image.Height = height;
     image.MaxValue = maxValue;
+    image.PPMFormat = magickNumber;
 
     if (magickNumber == "P3") P3Handler(file, image);
     if (magickNumber == "P6") P6Handler(file, image);
@@ -90,16 +91,16 @@ std::expected<Image, std::string> GetImage(const std::filesystem::path& path) {
     return image;
 }
 
-std::expected<std::string, std::string> SaveImage(const std::filesystem::path& path, const Image& image, bool isBinary = false) {
+std::expected<std::string, std::string> SaveImage(const std::filesystem::path& path, const Image& image) {
     std::ofstream file(path, std::ios::binary);
     if (!file.is_open()) return std::unexpected("[Error] Failed open file");
 
-    file << (isBinary ? "P6" : "P3") << "\n";
+    file << image.PPMFormat << "\n";
     file << image.Width << " " << image.Height << "\n";
     file << image.MaxValue << "\n";
 
     size_t totalPixels = image.Width * image.Height;
-    if (isBinary) {
+    if (image.PPMFormat == "P6") {
         if (image.MaxValue < 256) {
             std::vector<uint8_t> buffer(totalPixels * 3);
             for (size_t i = 0; i < totalPixels; i++) {

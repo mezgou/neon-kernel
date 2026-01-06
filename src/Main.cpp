@@ -4,9 +4,12 @@
 #include "Image.hpp"
 #include "UtilityFunctions.hpp"
 #include "ImageProcessor.hpp"
+#include "Timer.hpp"
 
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
+
+    Timer timer("Run program");
 
     auto resultConfig = GetAppConfig(argc, argv);
     if (!resultConfig) {
@@ -26,17 +29,11 @@ int main(int argc, char* argv[]) {
     PrintDebugInfo(config, image);
 #endif
 
-    if (config.Effect == EffectType::Inversion) {
-        ApplyInversion(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
-    } else if (config.Effect == EffectType::Grayscale) {
-        ApplyGrayscale(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue);
-    } else if (config.Effect == EffectType::Blur) {
-        ApplyBlur(image.R.data(), image.G.data(), image.B.data(), image.Width, image.Height, image.MaxValue, config.CoefRadiusConvolution.value());
-    }
+    ApplyEffect(config, image);
 
-    auto result = SaveImage(config.Output, image, true);
+    auto result = SaveImage(config.Output, image);
     if (!result) {
-        std::println("{}", resultImage.error());
+        std::println("{}", result.error());
         return 1;
     }
     std::println("{}", result.value());

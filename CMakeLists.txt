@@ -13,6 +13,7 @@ set(SOURCES
     src/Main.cpp
     src/Config.cpp
     src/Image.cpp
+    src/utils/Timer.cpp
     src/kernels/ImageProcessor.cu
 )
 
