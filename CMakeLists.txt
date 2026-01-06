@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(SOURCES
     src/Main.cpp
     src/Config.cpp
+    src/Image.cpp
 )
 
 set(INCLUDES

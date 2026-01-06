@@ -9,7 +9,7 @@ std::expected<std::string_view, std::string> GetNextArgument(size_t index, std::
     if (index < arguments.size() && !std::string_view(arguments[index]).starts_with("-")) {
         return std::string_view(arguments[index]);
     }
-    return std::unexpected("[ERROR] Passed an argument with no value");
+    return std::unexpected("[Error] Passed an argument with no value");
 }
 
 std::expected<AppConfig, std::string> GetAppConfig(int argc, char* argv[]) {
@@ -20,7 +20,7 @@ std::expected<AppConfig, std::string> GetAppConfig(int argc, char* argv[]) {
     const std::unordered_map<std::string_view, EffectType> effects = {
         {"grayscale", EffectType::Grayscale},
         {"blur", EffectType::Blur},
-        {"inversion", EffectType::Inversion} 
+        {"inversion", EffectType::Inversion}
     };
 
     auto arguments = std::span(argv, argc);
